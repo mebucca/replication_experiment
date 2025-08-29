@@ -110,13 +110,11 @@ source(here("code","2_data_recoding.R"))
 
 source(here("code","3_fairness.R"))
 
-source(here("code","4_most_least.R"))
+source(here("code","4_most.R"))
 
 source(here("code","5_behavior.R"))
 
 source(here("code","6_opinions_US.R"))
 
-source(here("code","7_feelings.R"))
-
-source(here("code","8_assumptions.R"))
+source(here("code","7_assumptions.R"))
 
