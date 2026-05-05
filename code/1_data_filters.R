@@ -1,19 +1,33 @@
 
 # Load data
 
-data_experiment <- NULL
+file     <- paste0("data_pilot.csv")
+path     <- here("study_2/data",file)
+data_experiment <- read_delim(path, delim=",")
 
-for (i in c(12,13,14,20,21,22)) {
-  
-  file     <- paste0("info_",i,"-3-2024.csv")
-  path     <- here("data",file)
-  data_day <- read_delim(path, delim=";")
-  data_experiment <- rbind(data_experiment,data_day)
-  rm(data_day)
-  }
+# drop Qualtrics metadata rows
+data_experiment <- data_experiment %>%
+  slice(-(1:2)) 
 
+# dates
+
+data_experiment <- data_experiment %>%
+  mutate(
+    year = year(EndDate),
+    month = month(EndDate),
+    day = day(EndDate) 
+  )
+
+
+# keep data from definite experiment only (exclude pilot data)
+data_experiment <- data_experiment %>% filter(year==2026, month==2, day==12) 
+
+# drop columns with all NA values 
+data_experiment <- data_experiment %>%
+  select(where(~ !all(is.na(.))))
 
 data_experiment_complete <- data_experiment %>% 
-  as_tibble() %>%
-  drop_na(ConnectId,playerId,groupId,exchange,inequality,feelings) %>% # make sure that has complete information
-  filter(attention_check==5)  # keep only individuals who passed attention check
+  drop_na(ResponseId,conditions_DO) %>% # make sure that has complete information
+  filter(check1==6)  # keep only individuals who passed attention check
+
+

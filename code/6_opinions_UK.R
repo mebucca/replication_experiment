@@ -1,8 +1,8 @@
 # Talent most important
 
-depvar <- c("fairness","distribution_keep","fair_ineq","just_ineq")
-label <- c("Fairness","rank preservation","Fair inequality","J")
+depvar <- c("ahead_fwealth","ahead_peduc","ahead_ambition","ahead_hardwork")
 
+label <- c("Get ahead: family wealth","Get ahead: educated parents","Get ahead: ambition","Get ahead: hard work")
 
 pretty_map <- c(
   "ineq_oppmore unequal"                                    = "Opportunity inequality (unequal)",
@@ -28,15 +28,13 @@ pretty_map <- c(
 )
 
 
-
-
 for (dv in depvar) {
   
   # eval each depentend varible
   data_experiment_complete <- data_experiment_complete %>% mutate(outcome_var = !!sym(dv)) 
   
   # logistic regression model 
-  mymodel <- lm(outcome_var ~  ineq_opp*ineq_out, data=data_experiment_complete)
+  mymodel <- glm(outcome_var ~ ineq_opp*ineq_out, data=data_experiment_complete, family="binomial")
   
   
   mymodel_ctrl <- update(mymodel, . ~  . + as.numeric(age) + factor(gender) + factor(race) + years_of_schooling + income_midpoint + pol)
@@ -44,23 +42,24 @@ for (dv in depvar) {
   
   # new data for predictions
   newx <- data_experiment_complete %>% data_grid(ineq_opp,ineq_out,.model=mymodel)
-  newx <- cbind(newx,predict(mymodel,newdata=newx, se.fit=T)) %>%
+  newx <- cbind(newx,predict(mymodel,newdata=newx, type="response", se.fit=T)) %>%
     mutate(lwr_95 = fit - 1.96 * se.fit, 
            upr_95 = fit + 1.96 * se.fit,
            lwr_90 = fit - 1.645 * se.fit, 
            upr_90 = fit + 1.645 * se.fit)
   
   
-  #plot
-  
-  ylim_list <- list(
-    fairness           = c(2.4, 5.4),
-    distribution_keep  = c(0.75, 1.0),
-    fair_ineq          = c(0.53, 0.77),
-    just_ineq          = c(-0.16, 0.40)
-  )
+  # plot
 
-  dodge_width <- width # Adjust this value as needed
+  ylim_list <- list(
+    ahead_fwealth   = c(0.37, 0.90),
+    ahead_peduc     = c(0.37, 0.90),
+    ahead_ambition  = c(0.37, 0.90),
+    ahead_hardwork  = c(0.37, 0.90)
+  )
+  
+  dodge_width <- width  # Adjust this value as needed
+  
   myplot <- newx %>%
     ggplot(aes(x = ineq_opp, y = fit, colour = ineq_out, shape = ineq_out)) +
     geom_point(size = 2.7, position = position_dodge(width = dodge_width)) +
@@ -77,17 +76,21 @@ for (dv in depvar) {
           axis.title.x = element_text(size = rel(0.8)),
           strip.text.x = element_blank(),
           strip.background.x = element_blank()) +
-    labs(x = "opportunity",
-         y = label[match(dv, depvar)],
-         colour = NULL)
+    labs(
+      colour = NULL,
+      x = "opportunity",
+      y = label[match(dv, depvar)]
+    )
   
   assign(paste0("plot_",dv,"_s2"),myplot)
+
+  
   # save table and plot
   
   file_table <- paste0(dv, "_s2.tex")
   file_plot  <- paste0(dv, "_s2.jpg")
   
-
+  
   cov_order <- unique(c(
     names(coef(mymodel_ctrl))[-1],
     names(coef(mymodel))[-1]
@@ -110,7 +113,8 @@ for (dv in depvar) {
             table.placement = "H",
             header = FALSE)
   
-  ggsave(here("study_2/figures",file_plot), myplot, height = fig_h, width =  fig_w)
+  
+  ggsave(here("study_2/figures",file_plot), myplot, height = fig_h, width = fig_w)
   
 }
 

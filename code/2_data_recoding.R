@@ -2,150 +2,129 @@
 # recode variables
 data_experiment_complete <- 
   data_experiment_complete %>% 
-  mutate(game_winner   = if_else(game_winner==T,"winner","loser")) %>% 
-  mutate(fairness      = fair_unfair_bar_value) %>%
-  mutate(distribution_winner_amount = distribution_winner_amount/250 ) %>%
-  mutate(distribution_loser_amount = distribution_loser_amount/250 ) %>%
+  mutate(ineq_out = if_else(str_detect(conditions_DO, "high"), "high", "low"),
+         ineq_out = factor(ineq_out, levels = c("low", "high"))) %>%
+  mutate(ineq_opp = if_else(str_detect(conditions_DO, "unfair"), "more unequal", "more equal")) %>%
+  mutate(fairness  = coalesce(unfair_fair_1_1,unfair_fair_2_1) %>% str_extract("\\d+") %>% as.numeric()) %>%
+  mutate(distribution_winner_amount = coalesce(fairineq_low_1, fairineq_high_1) %>% str_extract("\\d+") %>% as.numeric() ) %>%
+  mutate(distribution_loser_amount = coalesce(fairineq_low_2, fairineq_high_2) %>% str_extract("\\d+") %>% as.numeric() ) %>%
+  mutate(base = 15500/1000, inequality = if_else(ineq_out=="high", 201000/1000 - base, 64800/1000 - base)) %>%
   mutate(distribution_keep =  if_else(distribution_loser_amount<distribution_winner_amount,1,0)) %>%
   mutate(fair_ineq  = distribution_winner_amount/(distribution_winner_amount + distribution_loser_amount)) %>%
   mutate(obs_ineq      = (inequality + base)/(inequality + base + base))  %>%
-  mutate(just_ineq     = log((obs_ineq + 0.01)/(fair_ineq + 0.01) ) ) %>%
-  mutate(most_luck     = if_else(most_important=="luck",1,0)) %>%
-  mutate(most_talent   = if_else(most_important=="talent",1,0)) %>%
-  mutate(most_rules    = if_else(most_important=="rules",1,0)) %>%
-  mutate(least_luck    = if_else(least_important=="luck",1,0)) %>%
-  mutate(least_talent  = if_else(least_important=="talent",1,0)) %>%
-  mutate(least_rules   = if_else(least_important=="rules",1,0)) %>%
-  mutate(ahead_fwealth   = if_else(get_ahead_1>=4,1,0)) %>%
-  mutate(ahead_peduc     = if_else(get_ahead_2>=4,1,0)) %>%
-  mutate(ahead_ambition  = if_else(get_ahead_3>=4,1,0)) %>%
-  mutate(ahead_hardwork  = if_else(get_ahead_4>=4,1,0)) %>%
-  mutate(ineq_toohigh    = if_else(income_inequality =="strongly_agree",1,0)) %>%
-  mutate(gov_redineq     = if_else(government_opinion =="strongly_agree",1,0)) %>%
-  mutate(feeling_pos     = if_else(feelings =="happy",1,0)) %>%
-  mutate(feeling_neg     = if_else(feelings =="sad" | feelings =="angry",1,0)) %>%
-  mutate(min_payment_UG = min_payment_UG*100) %>%
-  mutate(max_payment_UG = max_payment_UG*100) %>%
-  mutate(day = day(as.Date(date))) %>%
-  mutate(income_midpoint = case_when(
-    income == "$0-$9,999" ~ 5000,
-    income == "$10,000-$24,999" ~ 17500,
-    income == "$25,000-$39,999" ~ 32500,
-    income == "$40,000-$54,999" ~ 47500,
-    income == "$55,000-$69,999" ~ 62500,
-    income == "$70,000-$84,999" ~ 77500,
-    income == "$85,000-$99,999" ~ 92500,
-    income == "$100,000-$114,999" ~ 107500,
-    income == "$115,000-$129,999" ~ 122500,
-    income == "$130,000-$144,999" ~ 137500,
-    income == "$145,000-$159,999" ~ 152500,
-    income == "$160,000-$174,999" ~ 167500,
-    income == "$175,000+" ~ 175000, # Assuming 175000 as the midpoint for simplicity; adjust if necessary
-    is.na(income) ~ NA_real_, # Handle NA values
-    TRUE ~ NA_real_ # Default case if none of the above matches
-  )) %>%
-  mutate(years_of_schooling = case_when(
-    education == " Less  than  High  School " ~ 10,
-    education == " High  School " ~ 12,
-    education == " Some  College " ~ 14,
-    education == " College  Degree " ~ 16,
-    education == " Graduate/Professional  Degree " ~ 20,
-    is.na(education) ~ NA_real_,
-    TRUE ~ NA_real_ # Handles any unexpected cases
-))  
-
-
-
-# creates unique identifier for each pair of players
-data_experiment_complete <- data_experiment_complete %>% 
-  group_by(day,groupId,exchange,inequality,base) %>% 
-  mutate(pairId = if_else(bot_opponent==F,cur_group_id(),NA_integer_)) %>%
-  ungroup()
-
-data_experiment_complete <- data_experiment_complete %>% group_by(pairId) %>%
-  mutate(count_pair = n()) %>%
-  mutate(pairId = if_else(count_pair==2,pairId,NA_integer_)) %>%
-  ungroup()
-
-# computes payment of each player
-data_experiment_complete <- data_experiment_complete %>% 
-  mutate(payment = if_else(game_winner=="winner", inequality + base, base)) %>%
-  ungroup()
-
-
-# deviations from min_max strategy
-data_experiment_complete <-   data_experiment_complete %>% 
-   mutate(diff_r_1 = average_difference_round_1...15) %>% 
-   mutate(diff_r_2 = average_difference_round_2...19) %>% 
-   mutate(diff_r_3 = average_difference_round_3...23) %>% 
-   mutate(diff_r_4 = average_difference_round_1...29) %>% 
-   mutate(diff_r_5 = average_difference_round_2...32) %>% 
-   mutate(diff_r_6 = average_difference_round_3...35) %>% 
-   mutate(diff_r_7 = average_difference_round_4) %>% 
-   mutate(diff_r_8 = average_difference_round_5) 
-    
-
-# hand in each round
-data_experiment_complete <- data_experiment_complete %>% 
-  mutate(powerhand_1 = power_player_round_1_game) %>% 
-  mutate(powerhand_2 = power_player_round_2_game) %>% 
-  mutate(powerhand_3 = power_player_round_3_game) %>% 
-  mutate(powerhand_4 = power_player_round_4_game) %>% 
-  mutate(powerhand_5 = power_player_round_5_game) 
-
-# relative quality of hand in each round
-data_experiment_complete <- data_experiment_complete %>% 
-  group_by(pairId) %>%
-  mutate(relpowerhand_1 = power_player_round_1_game/sum(power_player_round_1_game)) %>%
-  mutate(relpowerhand_2 = power_player_round_2_game/sum(power_player_round_2_game)) %>%
-  mutate(relpowerhand_3 = power_player_round_3_game/sum(power_player_round_3_game)) %>%
-  mutate(relpowerhand_4 = power_player_round_4_game/sum(power_player_round_4_game)) %>%
-  mutate(relpowerhand_5 = power_player_round_5_game/sum(power_player_round_5_game)) %>%
-  ungroup()
-
-
-# computes inequality of opportunity at group level
-data_experiment_complete <- data_experiment_complete %>%
-  rowwise() %>%
-  mutate(relpowerhand_total = mean(relpowerhand_2,relpowerhand_3,relpowerhand_4,relpowerhand_5)) %>%
-  ungroup() %>%
-  group_by(pairId) %>%
-  mutate(ineq_opp = Gini(relpowerhand_total, na.rm = T)) %>%
-  ungroup()
-
-# recode variables
-
-data_experiment_complete <- 
-  data_experiment_complete %>% 
-  mutate(inequality    = factor(inequality))
-
-
-data_experiment_complete <- 
-  data_experiment_complete %>%  mutate(
-    zip_code = str_trim(zip_code),  # remove extra spaces
-    zip_prefix = str_sub(zip_code, 1, 1),  # extract first digit
-    region = case_when(
-      zip_prefix %in% c("0", "1")           ~ "Northeast",
-      zip_prefix %in% c("2", "3")           ~ "South",
-      zip_prefix %in% c("4", "5", "6")      ~ "Midwest",
-      zip_prefix %in% c("7", "8", "9")      ~ "West",
-      TRUE                                  ~ NA_character_
+  mutate(just_ineq     = log((obs_ineq + 0.01)/(fair_ineq + 0.01))) %>%   
+  mutate(get_ahead_1 = coalesce(important_factors_1_1,important_factors_2_1)) %>%
+  mutate(get_ahead_2 = coalesce(important_factors_1_2,important_factors_2_2)) %>%
+  mutate(get_ahead_3 = coalesce(important_factors_1_3,important_factors_2_3)) %>%
+  mutate(get_ahead_4 = coalesce(important_factors_1_4,important_factors_2_4)) %>%
+  mutate(ahead_fwealth   = if_else(get_ahead_1 %in% c("Very Important","Essential"),1,0)) %>%
+  mutate(ahead_peduc     = if_else(get_ahead_2 %in% c("Very Important","Essential"),1,0)) %>%
+  mutate(ahead_ambition  = if_else(get_ahead_3 %in% c("Very Important","Essential"),1,0)) %>%
+  mutate(ahead_hardwork  = if_else(get_ahead_4 %in% c("Very Important","Essential"),1,0)) %>%
+  mutate(
+    income_midpoint = case_when(
+      income_UK == "£10,000 or less"        ~ 5000,
+      income_UK == "£10,001–£15,000"        ~ 12500,
+      income_UK == "£15,001–£20,000"        ~ 17500,
+      income_UK == "£20,001–£25,000"        ~ 22500,
+      income_UK == "£25,001–£35,000"        ~ 30000,
+      income_UK == "£35,001–£60,000"        ~ 47500,
+      income_UK == "£60,001–£90,000"        ~ 75000,
+      income_UK == "£90,001–£130,000"       ~ 110000,
+      income_UK == "£130,001 or more"       ~ 150000,  # adjustable top-code midpoint
+      is.na(income_UK)                      ~ NA_real_,
+      TRUE                                  ~ NA_real_
     )
-  )
+  ) %>%
+  mutate(
+    years_of_schooling = case_when(
+      educ_UK == "Less than Secondary School"                                   ~ 10,
+      educ_UK == "Secondary School (Completed)"                                  ~ 12,
+      educ_UK == "Post-secondary Vocational or Technical Training"               ~ 14,
+      educ_UK == "Post-secondary Academic Qualification (Did not Complete Degree)" ~ 15,
+      educ_UK == "Bachelor’s degree or equivalent first degree"                  ~ 16,
+      educ_UK == "Graduate or professional degree (e.g., MA, MSc, MBA, JD, MD, PhD)" ~ 18,
+      educ_UK == "None of the above"                                              ~ NA_real_,
+      is.na(educ_UK)                                                              ~ NA_real_,
+      TRUE                                                                        ~ NA_real_
+    )
+  ) %>%
+  mutate(gender = if_else(gender %in% c("Non-binary / third gender", "Prefer not to say"), "Other gender", gender))
+
 
 # Sample sociodemographic composition table
 
 # Clean data
 data_experiment_complete_clean <- data_experiment_complete %>%
-  select(age, political_ideology, income, gender, race, education, religion, political_party, region) %>%
+  select(age, pol, income_UK, gender, race, educ_UK, citizen) %>%
   mutate(
     age = as.numeric(age),
-    political_ideology = as.numeric(political_ideology),
     across(where(is.character), ~ stringr::str_squish(.))
   )
 
+# Recode labels to match target
+data_experiment_complete_clean <- data_experiment_complete_clean %>%
+  mutate(
+    educ_UK = recode(educ_UK,
+      "Bachelor's degree or equivalent first degree"          = "Bachelor's Degree",
+      "Graduate or professional degree (e.g., MA, MSc, MBA, JD, MD, PhD)" = "Graduate/Professional Degree",
+      "Secondary School (Completed)"                          = "Secondary School (Completed)",
+      "Post-secondary Vocational or Technical Training"       = "Post-secondary Vocational/Technical",
+      "Post-secondary Academic Qualification (Did not Complete Degree)" = "Post-secondary, No Degree",
+      "Less than Secondary School"                            = "Less than Secondary School"
+    ),
+    income_UK = recode(income_UK,
+      "£10,000 or less"      = "\u00a310,000 or less",
+      "£10,001–£15,000"      = "\u00a310,001--\u00a315,000",
+      "£15,001–£20,000"      = "\u00a315,001--\u00a320,000",
+      "£20,001–£25,000"      = "\u00a320,001--\u00a325,000",
+      "£25,001–£35,000"      = "\u00a325,001--\u00a335,000",
+      "£35,001–£60,000"      = "\u00a335,001--\u00a360,000",
+      "£60,001–£90,000"      = "\u00a360,001--\u00a390,000",
+      "£90,001–£130,000"     = "\u00a390,001--\u00a3130,000",
+      "£130,001 or more"     = "\u00a3130,001 or more"
+    ),
+    pol = recode(pol,
+      "Extremely Liberal"    = "Extremely Liberal",
+      "Liberal"              = "Liberal",
+      "Slightly Liberal"     = "Slightly Liberal",
+      "Moderate"             = "Moderate",
+      "Slightly Conservative" = "Slightly Conservative",
+      "Conservative"         = "Conservative",
+      "Extremely Conservative" = "Extremely Conservative"
+    ),
+    gender = recode(gender,
+      "Male"                      = "Male",
+      "Female"                    = "Female",
+      "Non-binary / third gender" = "Other",
+      "Prefer not to say"         = "Other"
+    ),
+    race = recode(race,
+      "White"                          = "White",
+      "Black or African"               = "Black or African",
+      "Asian"                          = "Asian",
+      "Multiracial / Mixed race"       = "Multiracial/Mixed Race",
+      "Hispanic or Latino/a/x"         = "Hispanic or Latino/a",
+      "Middle Eastern or North African" = "Middle Eastern/North African",
+      "Another group"                  = "Another Group"
+    ),
+    citizen = recode(citizen,
+      "Yes" = "Yes",
+      "No"  = "No"
+    )
+  ) %>%
+  rename(
+    Age                = age,
+    `Political Ideology` = pol,
+    Income             = income_UK,
+    Gender             = gender,
+    Race               = race,
+    Education          = educ_UK,
+    Citizenship        = citizen
+  )
+
 # Specify variable types
-continuous_vars <- c("age", "political_ideology")
+continuous_vars <- c("Age")
 categorical_vars <- setdiff(names(data_experiment_complete_clean), continuous_vars)
 
 # Summarize continuous variables
@@ -154,13 +133,15 @@ cont_summary <- data_experiment_complete_clean %>%
   pivot_longer(everything(), names_to = "Variable", values_to = "Value") %>%
   group_by(Variable) %>%
   summarise(
-    N = sum(!is.na(Value)),
-    Mean = mean(Value, na.rm = TRUE),
-    SD = sd(Value, na.rm = TRUE),
-    Min = min(Value, na.rm = TRUE),
-    Max = max(Value, na.rm = TRUE)
+    N       = sum(!is.na(Value)),
+    Mean    = mean(Value, na.rm = TRUE),
+    SD      = sd(Value, na.rm = TRUE),
+    Min     = min(Value, na.rm = TRUE),
+    Max     = max(Value, na.rm = TRUE)
   ) %>%
-  mutate(across(where(is.numeric), ~round(., 2)))
+  mutate(across(where(is.numeric), ~ round(., 2))) %>%
+  mutate(Value = "", Percent = NA_real_) %>%
+  select(Variable, Value, N, Percent, Mean, SD, Min, Max)
 
 # Summarize categorical variables
 cat_summary <- data_experiment_complete_clean %>%
@@ -172,24 +153,65 @@ cat_summary <- data_experiment_complete_clean %>%
   group_by(Variable) %>%
   mutate(Percent = round(100 * N / sum(N), 1)) %>%
   ungroup() %>%
-  mutate(
-    Mean = NA, SD = NA, Min = NA, Max = NA
-  ) %>%
+  mutate(Mean = NA_real_, SD = NA_real_, Min = NA_real_, Max = NA_real_) %>%
   select(Variable, Value, N, Percent, Mean, SD, Min, Max)
 
-# For continuous, add Value = "" and Percent = NA for consistency
-cont_summary <- cont_summary %>%
-  mutate(Value = "", Percent = NA) %>%
-  select(Variable, Value, N, Percent, Mean, SD, Min, Max)
+# Define display order
+var_order <- c("Age", "Citizenship", "Education", "Gender", "Income",
+               "Political Ideology", "Race")
 
-# Combine
+# Combine and sort
 final_table <- bind_rows(cont_summary, cat_summary) %>%
-  arrange(Variable, desc(N), Value)
+  mutate(Variable = factor(Variable, levels = var_order)) %>%
+  arrange(Variable, desc(N)) %>%
+  mutate(Variable = as.character(Variable))
 
-# Output to LaTeX
-file_table <- here("tables", "table_sociodemo_descriptives.tex")
-modelsummary::datasummary_df(
-  final_table,
-  title = "Descriptive Statistics: Sociodemographic Variables",
-  output = file_table
+# Sanitize for LaTeX
+final_table <- final_table %>%
+  mutate(
+    Value = str_replace_all(Value, "\u00a3", "\\\\pounds{}"),
+    Value = str_replace_all(Value, "\u2013", "--")
+  )
+
+# --- Write LaTeX manually ---
+file_table <- here("study_2/tables", "table_sociodemo_descriptives.tex")
+
+format_cell <- function(x) ifelse(is.na(x), "", as.character(x))
+
+rows <- purrr::pmap_chr(final_table, function(Variable, Value, N, Percent, Mean, SD, Min, Max) {
+  paste(Variable, "&", Value, "&", N, "&",
+        format_cell(Percent), "&", format_cell(Mean), "&",
+        format_cell(SD), "&", format_cell(Min), "&",
+        format_cell(Max), "\\\\")
+})
+
+# Suppress repeated variable names
+current_var <- ""
+rows_clean <- purrr::map_chr(seq_along(rows), function(i) {
+  var <- final_table$Variable[i]
+  if (var == current_var) {
+    rows[[i]] <- sub(paste0("^", var), "", rows[[i]])
+    rows[[i]] <- paste0(" ", rows[[i]])
+  } else {
+    current_var <<- var
+  }
+  rows[[i]]
+})
+
+latex_out <- paste0(
+  "\\begin{table}[H]\n",
+  "\\scriptsize\n",
+  "\\centering\n",
+  "\\caption{Descriptive Statistics: Sociodemographic Variables (UK)}\n",
+  "\\label{tab:desc_stats_uk}\n",
+  "\\begin{tabular}{llllllll}\n",
+  "\\hline\n",
+  "Variable & Value & N & Percent & Mean & SD & Min & Max \\\\\n",
+  "\\hline\n",
+  paste(rows_clean, collapse = "\n"), "\n",
+  "\\hline\n",
+  "\\end{tabular}\n",
+  "\\end{table}\n"
 )
+
+writeLines(latex_out, file_table)
